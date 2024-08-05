@@ -9,7 +9,7 @@ pub use error::{Error, Result};
 
 use yaml_rust2::{Yaml, YamlLoader};
 
-pub fn parse_yaml(s: &str) -> Result<Vec<Yaml>> {
+pub fn yaml_from_str(s: &str) -> Result<Vec<Yaml>> {
     YamlLoader::load_from_str(s).map_err(Error::YamlError)
 }
 

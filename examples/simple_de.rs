@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use serde_yaml::{from_yaml, parse_yaml};
+use serde_yaml::{from_yaml, yaml_from_str};
 
 #[derive(Deserialize, Debug)]
 struct Test {
@@ -9,7 +9,7 @@ struct Test {
 }
 
 fn main() -> anyhow::Result<()> {
-    let yaml = parse_yaml(
+    let yaml = yaml_from_str(
         "
     i: 9
     f: 8

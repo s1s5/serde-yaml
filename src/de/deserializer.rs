@@ -12,22 +12,22 @@ pub struct Deserializer<'a> {
 
 impl<'a> Deserializer<'a> {
     fn unexpected(&self) -> de::Unexpected {
-        if self.yaml.is_null() {
-            de::Unexpected::Unit
-        } else if let Some(b) = self.yaml.as_bool() {
-            de::Unexpected::Bool(b)
-        } else if let Some(i) = self.yaml.as_i64() {
-            de::Unexpected::Signed(i)
-        } else if let Some(f) = self.yaml.as_f64() {
-            de::Unexpected::Float(f)
-        } else if let Some(s) = self.yaml.as_str() {
-            de::Unexpected::Str(s)
-        } else if let Some(_v) = self.yaml.as_vec() {
-            de::Unexpected::Seq
-        } else if let Some(_m) = self.yaml.as_hash() {
-            de::Unexpected::Map
-        } else {
-            de::Unexpected::Other("unknown type")
+        match self.yaml {
+            Yaml::Real(_) => {
+                if let Some(f) = self.yaml.as_f64() {
+                    de::Unexpected::Float(f)
+                } else {
+                    de::Unexpected::Other("bad float")
+                }
+            }
+            Yaml::Integer(i) => de::Unexpected::Signed(*i),
+            Yaml::String(s) => de::Unexpected::Str(s),
+            Yaml::Boolean(b) => de::Unexpected::Bool(*b),
+            Yaml::Array(_a) => de::Unexpected::Seq,
+            Yaml::Hash(_m) => de::Unexpected::Map,
+            Yaml::Alias(_a) => de::Unexpected::Other("alias"),
+            Yaml::Null => de::Unexpected::Unit,
+            Yaml::BadValue => de::Unexpected::Other("bad value"),
         }
     }
 }
@@ -39,28 +39,28 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        if self.yaml.is_null() {
-            visitor.visit_unit()
-        } else if let Some(b) = self.yaml.as_bool() {
-            visitor.visit_bool(b)
-        } else if let Some(i) = self.yaml.as_i64() {
-            visitor.visit_i64(i)
-        } else if let Some(f) = self.yaml.as_f64() {
-            visitor.visit_f64(f)
-        } else if let Some(s) = self.yaml.as_str() {
-            visitor.visit_borrowed_str(s)
-        } else if let Some(v) = self.yaml.as_vec() {
-            visitor.visit_seq(YamlVec { iter: v.iter() })
-        } else if let Some(m) = self.yaml.as_hash() {
-            visitor.visit_map(YamlMap {
+        match self.yaml {
+            Yaml::Real(_) => {
+                if let Some(f) = self.yaml.as_f64() {
+                    visitor.visit_f64(f)
+                } else {
+                    Err(de::Error::custom(format!("bad float. {:?}", self.yaml)))
+                }
+            }
+            Yaml::Integer(i) => visitor.visit_i64(*i),
+            Yaml::String(s) => visitor.visit_borrowed_str(s),
+            Yaml::Boolean(b) => visitor.visit_bool(*b),
+            Yaml::Array(a) => visitor.visit_seq(YamlVec { iter: a.iter() }),
+            Yaml::Hash(m) => visitor.visit_map(YamlMap {
                 iter: m.iter(),
                 next_value: None,
-            })
-        } else {
-            Err(de::Error::custom(format!(
-                "Unexpected type found. {:?}",
+            }),
+            Yaml::Alias(_a) => Err(de::Error::custom(format!(
+                "Unsupported alias. {:?}",
                 self.yaml
-            )))
+            ))),
+            Yaml::Null => visitor.visit_unit(),
+            Yaml::BadValue => Err(de::Error::custom(format!("bad value. {:?}", self.yaml))),
         }
     }
 
