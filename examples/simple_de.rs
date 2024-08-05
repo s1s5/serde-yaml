@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use serde_yaml::{from_yaml, yaml_from_str};
 
+#[allow(unused)]
 #[derive(Deserialize, Debug)]
 struct Test {
     i: i8,

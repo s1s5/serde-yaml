@@ -7,12 +7,23 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 pub enum Error {
     YamlError(ScanError),
+    Custom(String),
     ParseError,
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Error")
+        match self {
+            Error::YamlError(s) => {
+                write!(f, "Parse Error {s:?}")
+            }
+            Error::Custom(s) => {
+                write!(f, "{s}")
+            }
+            Error::ParseError => {
+                write!(f, "parse error")
+            }
+        }
     }
 }
 
@@ -27,41 +38,33 @@ impl serde::de::StdError for Error {
 }
 impl fmt::Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // write!(
-        //     f,
-        //     "Error({:?}, line: {}, column: {})",
-        //     self.err.code.to_string(),
-        //     self.err.line,
-        //     self.err.column
-        // )
-        write!(f, "Error")
+        match self {
+            Error::YamlError(s) => {
+                write!(f, "Parse Error {s:?}")
+            }
+            Error::Custom(s) => {
+                write!(f, "{s}")
+            }
+            Error::ParseError => {
+                write!(f, "parse error")
+            }
+        }
     }
 }
 
 impl de::Error for Error {
     #[cold]
     fn custom<T: fmt::Display>(msg: T) -> Error {
-        // make_error(msg.to_string())
-        Error::ParseError
+        Error::Custom(format!("Error: {}", msg))
     }
 
     #[cold]
     fn invalid_type(unexp: de::Unexpected, exp: &dyn de::Expected) -> Self {
-        // Error::custom(format_args!(
-        //     "invalid type: {}, expected {}",
-        //     JsonUnexpected(unexp),
-        //     exp,
-        // ))
-        Error::ParseError
+        Error::custom(format_args!("invalid type: {}, expected {}", unexp, exp,))
     }
 
     #[cold]
     fn invalid_value(unexp: de::Unexpected, exp: &dyn de::Expected) -> Self {
-        // Error::custom(format_args!(
-        //     "invalid value: {}, expected {}",
-        //     JsonUnexpected(unexp),
-        //     exp,
-        // ))
-        Error::ParseError
+        Error::custom(format_args!("invalid value: {}, expected {}", unexp, exp,))
     }
 }
